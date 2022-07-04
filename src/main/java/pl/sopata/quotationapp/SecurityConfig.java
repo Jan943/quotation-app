@@ -2,6 +2,7 @@ package pl.sopata.quotationapp;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.User;
@@ -14,10 +15,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Bean
     public UserDetailsService userDetailsService(){
-        UserDetails user = User.withDefaultPasswordEncoder()
+        UserDetails moderator = User.withDefaultPasswordEncoder()
                 .username("user")
                 .password("user1")
-                .roles("USER")
+                .roles("MODERATOR")
                 .build();
 
         UserDetails admin = User.withDefaultPasswordEncoder()
@@ -26,17 +27,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .roles("ADMIN")
                 .build();
 
-        return new InMemoryUserDetailsManager(user, admin);
+        return new InMemoryUserDetailsManager(moderator, admin);
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/hello").permitAll()
-                .anyRequest().hasRole("ADMIN")
+        http.httpBasic().and().authorizeRequests()
+                .antMatchers(HttpMethod.GET, "/api").permitAll()
+                .antMatchers(HttpMethod.POST, "/api").hasAnyRole("MODERATOR", "ADMIN")
+                .antMatchers(HttpMethod.DELETE, "/api").hasRole("ADMIN")
                 .and()
                 .formLogin().permitAll()
                 .and()
-                .logout().permitAll();
+                .logout().permitAll()
+                .and()
+                .csrf().disable();
     }
 }
